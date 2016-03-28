@@ -193,7 +193,7 @@ int get_note() {
   // maps the value read to a MIDI note. We use a lookup table that maps
   // valid combinations of keys to a note. If the lookup fails, the fingering
   // was not valid and the current sounding note is returned.
-  uint8_t ret = 60;
+  int ret = -1;  // Sentinel for unnown fingering
   uint16_t touchValue = touchSensor.touched();
   // Since we're not using the 4th finger of the left hand, mask off that key
   touchValue = touchValue & 0b1111111111011111;
@@ -213,7 +213,7 @@ int get_velocity(int initial, int final, unsigned long time_delta) {
 void loop() {
   // read the breath sensor input on analog pin 0
   sensorValue = analogRead(A0);
-  touchSensor.touched();
+  touchSensor.touched();  // Read sensor so it doesn't block (?)
   if (state == NOTE_OFF) {
     if (sensorValue > NOTE_ON_THRESHOLD) {
       // Value has risen above threshold. Move to the RISE_TIME
@@ -253,6 +253,9 @@ void loop() {
       }
     }
     int newNote = get_note();
+    if (newNote == -1) {
+      return;  // Ignore unknown fingerings
+    }
     if (newNote != noteSounding) {
       // Player has moved to a new fingering while still blowing.
       // Send a note off for the current node and a note on for
