@@ -72,6 +72,9 @@ unsigned long atSendTime = 0L;
 // This is the 21-input touch sensor
 Adafruit_MPR121 touchSensor = Adafruit_MPR121();
 
+#define FMAP_SIZE 33
+
+#define C5 60
 
 void setup() {
   while (!Serial); // Wait for serial to be ready
@@ -103,42 +106,86 @@ struct fmap_entry {
 };
 
 // The table of valid fingering -> MIDI note mappings
-struct fmap_entry fmap[16] = {
-  // C 1111011101
-  {0x03DD, 0},
+// TODO(ggood) this needs a really good explanation, with examples
+struct fmap_entry fmap[FMAP_SIZE] = {
+  // Middle octave
+  // C
+  {0b1111011100, 60},
   // Skip C#
-  // D 0111011101
-  {0x01DD, 2},
+  // D
+  {0b0111011100, 62},
   // Skip D#
-  // E 0011011101
-  {0x00DD, 4},
-  // F 110101110
-  {0x035D, 5},
-  // F# 0110011101
-  {0x019D, 6},
-  // G 000001110
-  {0x001D, 7},
+  // E
+  {0b0011011100, 64},
+  // F
+  {0b1101011100, 65},
+  {0b0001011100, 65},  // Lame F
+  // F#
+  {0b0110011100, 66},
+  // G
+  {0b0000011100, 67},
   // Skip G#
-  // A 0000001101 
-  {0x000D, 9},
-  // A# 0001010101
-  {0x0055, 10},
-  // B 0000000101
-  {0x0005, 11},
-  // C 0000001001
-  {0x0009, 12},
-  // C# 0000001100
-  {0x000C, 13},
-  // D 0000001000
-  {0x0008, 14},
-  // D# 0111011000
-  {0x01D8, 15},
-  // E 001111101
-  {0x007D, 16},
-  // F 0101011101
-  {0x015D, 17},
-  // F# 0010011101
-  {0x009D, 18}
+  // A
+  {0b0000001100, 69},
+  // A#
+  {0b0001010100, 70},
+  // B
+  {0b0000000100, 71},
+  // C
+  {0b0000001000, 72},
+
+  // Lower octave - LSB is on
+  // C
+  {0b1111011101, 48},
+  // Skip C#
+  // D
+  {0b0111011101, 50},
+  // Skip D#
+  // E
+  {0b0011011101, 52},
+  // F
+  {0b1101011101, 53},
+  {0b0001011101, 53},  // Lame F
+  // F#
+  {0b0110011101, 54},
+  // G
+  {0b0000011101, 55},
+  // Skip G#
+  // A
+  {0b0000001101, 57},
+  // A#
+  {0b0001010101, 58},
+  // B
+  {0b0000000101, 59},
+  // C
+  {0b0000001001, 60},
+
+  
+  // Upper octave - bit 1 is on
+  // C
+  {0b1111011110, 72},
+  // Skip C#
+  // D
+  {0b0111011110, 74},
+  // Skip D#
+  // E
+  {0b0011011110, 76},
+  // F
+  {0b1101011110, 77},
+  {0b0001011110, 77},  // Lame F
+  // F#
+  {0b0110011110, 78},
+  // G
+  {0b0000011110, 79},
+  // Skip G#
+  // A
+  {0b0000001110, 81},
+  // A#
+  {0b0001010110, 82},
+  // B
+  {0b0000000110, 83},
+  // C
+  {0b0000001010, 84},
 };
 
 int get_note() {
@@ -148,9 +195,12 @@ int get_note() {
   // was not valid and the current sounding note is returned.
   uint8_t ret = 60;
   uint16_t touchValue = touchSensor.touched();
-  for (uint8_t i = 0; i < 16; i++) {
+  // Since we're not using the 4th finger of the left hand, mask off that key
+  touchValue = touchValue & 0b1111111111011111;
+  Serial.println(touchValue, BIN);
+  for (uint8_t i = 0; i < FMAP_SIZE; i++) {
     if (touchValue == fmap[i].keys) {
-      ret = 84 - fmap[i].midi_note;
+      ret = fmap[i].midi_note;
     }
   }
   return ret;
@@ -161,8 +211,9 @@ int get_velocity(int initial, int final, unsigned long time_delta) {
 }
 
 void loop() {
-  // read the input on analog pin 0
+  // read the breath sensor input on analog pin 0
   sensorValue = analogRead(A0);
+  touchSensor.touched();
   if (state == NOTE_OFF) {
     if (sensorValue > NOTE_ON_THRESHOLD) {
       // Value has risen above threshold. Move to the RISE_TIME
