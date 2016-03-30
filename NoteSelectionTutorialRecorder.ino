@@ -69,12 +69,11 @@ int atVal;
 // The last time we sent an aftertouch value
 unsigned long atSendTime = 0L;
 
-// This is the 21-input touch sensor
+// This is the 12-input touch sensor
 Adafruit_MPR121 touchSensor = Adafruit_MPR121();
 
+// The total size of our fingering map (FMAP)
 #define FMAP_SIZE 33
-
-#define C5 60
 
 void setup() {
   while (!Serial); // Wait for serial to be ready
@@ -99,32 +98,38 @@ void setup() {
 }
 
 
-// A mapping from a bitmask of fingering values to a MIDI note
+// A mapping from a bitmask of fingering values to a MIDI note.
+// The "keys" member is the bitmask of key-down values, and
+// midi_note is the MIDI note to send when that set of
+// keys are depressed.
 struct fmap_entry {
   uint16_t keys;
   uint8_t midi_note;
 };
 
 // The table of valid fingering -> MIDI note mappings
-// TODO(ggood) this needs a really good explanation, with examples
+// There is one entry in this table for every valid
+// fingering combination.
 struct fmap_entry fmap[FMAP_SIZE] = {
   // Middle octave
   // C
   {0b1111011100, 60},
-  // Skip C#
+  // Skip C# for now - key layout doesn't match recorder layout
   // D
   {0b0111011100, 62},
   // Skip D#
   // E
   {0b0011011100, 64},
-  // F
+  // F - note that there are two valid fingerings that will
+  // produce an F. The first one is the "correct" one, and
+  // the second one is how I learned to play recorder :-)
   {0b1101011100, 65},
-  {0b0001011100, 65},  // Lame F
+  {0b0001011100, 65},
   // F#
   {0b0110011100, 66},
   // G
   {0b0000011100, 67},
-  // Skip G#
+  // Skip G# - key layout doesn't match recorder layout
   // A
   {0b0000001100, 69},
   // A#
@@ -134,7 +139,7 @@ struct fmap_entry fmap[FMAP_SIZE] = {
   // C
   {0b0000001000, 72},
 
-  // Lower octave - LSB is on
+  // Lower octave - Least Significant Bit (LSB) is on.
   // C
   {0b1111011101, 48},
   // Skip C#
@@ -161,7 +166,7 @@ struct fmap_entry fmap[FMAP_SIZE] = {
   {0b0000001001, 60},
 
   
-  // Upper octave - bit 1 is on
+  // Upper octave - bit 1 is on, LSB is off
   // C
   {0b1111011110, 72},
   // Skip C#
@@ -191,9 +196,9 @@ struct fmap_entry fmap[FMAP_SIZE] = {
 int get_note() {
   // This routine reads the touch-sensitive keys of the instrument and
   // maps the value read to a MIDI note. We use a lookup table that maps
-  // valid combinations of keys to a note. If the lookup fails, the fingering
-  // was not valid and the current sounding note is returned.
-  int ret = -1;  // Sentinel for unnown fingering
+  // valid combinations of keys to a note. If the lookup fails, this
+  // routine returns -1 to indicate that the fingering was not valid.
+  int ret = -1;  // Sentinel for unknown fingering
   uint16_t touchValue = touchSensor.touched();
   // Since we're not using the 4th finger of the left hand, mask off that key
   touchValue = touchValue & 0b1111111111011111;
@@ -213,7 +218,11 @@ int get_velocity(int initial, int final, unsigned long time_delta) {
 void loop() {
   // read the breath sensor input on analog pin 0
   sensorValue = analogRead(A0);
-  touchSensor.touched();  // Read sensor so it doesn't block (?)
+  
+  // It appears to be the case that if you don't read the sensor value
+  // periodically, it can get stuck. So read it here, and just throw away
+  // the data. We'll read it in get_note().
+  touchSensor.touched();  // Read sensor so it doesn't get stuck
   if (state == NOTE_OFF) {
     if (sensorValue > NOTE_ON_THRESHOLD) {
       // Value has risen above threshold. Move to the RISE_TIME
