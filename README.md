@@ -5,4 +5,4 @@ uses an Adafruit MPR121 capacitive touch sensor breakout to
 detect key actuations. For more information, see my blog posts
 about this at:
 
-https://gordophone.blogspot.com/2016/02/note-selection-basics.html
+https://gordophone.blogspot.com
