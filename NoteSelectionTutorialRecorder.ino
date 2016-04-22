@@ -202,10 +202,11 @@ int get_note() {
   uint16_t touchValue = touchSensor.touched();
   // Since we're not using the 4th finger of the left hand, mask off that key
   touchValue = touchValue & 0b1111111111011111;
-  Serial.println(touchValue, BIN);
+
   for (uint8_t i = 0; i < FMAP_SIZE; i++) {
     if (touchValue == fmap[i].keys) {
       ret = fmap[i].midi_note;
+      break;
     }
   }
   return ret;
