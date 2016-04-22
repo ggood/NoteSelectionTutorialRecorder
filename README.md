@@ -1,16 +1,8 @@
 # NoteSelectionTutorialRecorder
 
-WORK IN PROGRESS, not finished yet
+This sketch is for a prototype electronic woodwind controller that
+uses an Adafruit MPR121 capacitive touch sensor breakout to
+detect key actuations. For more information, see my blog posts
+about this at:
 
-Tutorial topics to cover:
-- Introduce MPR121 touch sensor:
-  - Which breakout I'm using
-  - How it works
-  - How to wire it
-  - Simple example sketch, showing how to read all bits at once
-  - How you can use more than one
-- Expand 3-valve trumpet example
-- How to deal with invalid fingerings
-  - Ignore
-  - Try to be authentic to instrument by de-tuning, but out of scope
-- Final sketch, explanation
+https://gordophone.blogspot.com/2016/02/note-selection-basics.html
